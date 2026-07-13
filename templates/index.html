@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resume Screener Pro</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap');
+    * { font-family: 'Inter', sans-serif; }
+    .choices__inner {
+      background: #f8fafc !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 12px !important;
+      font-size: 0.875rem !important;
+      padding: 0.4rem 0.8rem !important;
+      min-height: 44px !important;
+      transition: all 0.2s;
+    }
+    .choices__inner:focus-within { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.2); }
+    .choices__list--dropdown { border-radius: 12px !important; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1) !important; }
+    .flash-success { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; padding: 0.75rem 1rem; border-radius: 12px; font-weight: 600; }
+    .flash-error { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; padding: 0.75rem 1rem; border-radius: 12px; font-weight: 600; }
+    .fade-in { animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+    .upload-zone { transition: all 0.3s; }
+    .upload-zone:hover { background: #f1f5f9; border-color: #6366f1; }
+    .upload-zone.dragover { border-color: #6366f1; background: #eef2ff; transform: scale(1.02); }
+  </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 min-h-screen antialiased">
+
+  <!-- HEADER -->
+  <header class="bg-gradient-to-r from-indigo-700 to-purple-700 text-white shadow-xl">
+    <div class="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
+      <div class="flex items-center gap-4">
+        <div class="h-12 w-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-2xl font-extrabold shadow-lg">M</div>
+        <div>
+          <h1 class="text-2xl font-extrabold tracking-tight">Matrix ATS</h1>
+          <p class="text-indigo-200 text-sm font-medium">AI‑powered resume screening engine</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="{{ url_for('export_all_zip') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 rounded-xl text-sm font-bold transition">
+          <i class="fas fa-download"></i> Export ZIP
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-white rounded-2xl shadow-lg p-6 border border-slate-100 flex items-center gap-4 hover:shadow-xl transition">
+        <div class="h-14 w-14 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 text-2xl"><i class="fas fa-file-alt"></i></div>
+        <div>
+          <p class="text-sm font-medium text-slate-500">Total Uploaded Resuems</p>
+          <p class="text-3xl font-bold text-slate-900">{{ total_count }}</p>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-lg p-6 border border-slate-100 flex items-center gap-4 hover:shadow-xl transition">
+        <div class="h-14 w-14 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 text-2xl"><i class="fas fa-check-circle"></i></div>
+        <div>
+          <p class="text-sm font-medium text-slate-500">Accepted Resumes </p>
+          <p class="text-3xl font-bold text-emerald-600">{{ accepted_candidates|length }}</p>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-lg p-6 border border-slate-100 flex items-center gap-4 hover:shadow-xl transition">
+        <div class="h-14 w-14 bg-rose-100 rounded-2xl flex items-center justify-center text-rose-600 text-2xl"><i class="fas fa-times-circle"></i></div>
+        <div>
+          <p class="text-sm font-medium text-slate-500">Rejected Resumes</p>
+          <p class="text-3xl font-bold text-rose-600">{{ rejected_candidates|length }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="space-y-2">
+          {% for category, message in messages %}
+            <div class="flash-{{ category }} flex items-center gap-2">
+              <i class="fas fa-{% if category == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- TWO COLUMNS -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+      <!-- LEFT: FILTER FORM -->
+      <div class="lg:col-span-1">
+        <div class="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+          <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
+            <h2 class="text-sm font-bold text-slate-700 flex items-center gap-2"><i class="fas fa-sliders-h text-indigo-600"></i> Filter Criteria</h2>
+          </div>
+
+          <form action="{{ url_for('index') }}" method="POST" enctype="multipart/form-data" class="p-6 space-y-5">
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Degree</label>
+              <select name="degree" id="degree_select" class="w-full">
+                <option value="">Search degree...</option>
+                {% for deg in degrees %}
+                  <option value="{{ deg }}"{% if filters.degree == deg %}selected{% endif %}>{{ deg }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Specialization / Subject</label>
+              <select name="subject" id="subject_select" class="w-full">
+                <option value="">Search specialization...</option>
+                {% for subj in subjects %}
+                  <option value="{{ subj }}"{% if filters.subject == subj %}selected{% endif %}>{{ subj }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Job Category</label>
+              <select name="job_category" id="category_select" class="w-full">
+                <option value="">Search domain...</option>
+                {% for cat in categories %}
+                  <option value="{{ cat }}"{% if filters.job_category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Minimum Experience</label>
+              <select name="experience" id="experience_select" class="w-full">
+                {% for opt in exp_options %}
+                  <option value="{{ opt }}" {% if filters.experience == opt %}selected{% endif %}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="pt-2">
+              <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Upload Resumes</label>
+              <div class="upload-zone relative border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center cursor-pointer bg-slate-50/50 hover:bg-slate-100 transition" id="dropZone">
+                <i class="fas fa-cloud-upload-alt text-4xl text-indigo-400 mb-2"></i>
+                <p class="text-sm font-medium text-slate-700">Drop files here or click to browse</p>
+                <p class="text-xs text-slate-400 mt-1">PDF, DOCX, JPG</p>
+                <div id="file-list" class="mt-3 text-left text-xs text-slate-600 space-y-1 max-h-32 overflow-y-auto">
+                  <span class="text-slate-400">No file chosen</span>
+                </div>
+                <input type="file" name="resumes" accept=".pdf,.docx,.jpg,.jpeg,.png,.webp" required multiple class="absolute inset-0 opacity-0 cursor-pointer" id="fileInput">
+              </div>
+            </div>
+
+            <button type="submit" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2">
+              <i class="fas fa-play"></i> Process
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- RIGHT: TWO POOLS -->
+      <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Accepted -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-emerald-700 flex items-center gap-2"><i class="fas fa-check-circle"></i> Accepted Resumes</h2>
+            <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full">{{ accepted_candidates|length }}</span>
+          </div>
+          <div class="space-y-3">
+            {% if accepted_candidates %}
+              {% for c in accepted_candidates %}
+                <div class="bg-white rounded-2xl shadow-md border border-emerald-200 p-4 hover:shadow-lg transition fade-in">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h3 class="font-bold text-slate-800">{{ c.name }}</h3>
+                      <p class="text-xs text-slate-500">{{ c.filename }}</p>
+                    </div>
+                    <a href="{{ url_for('view_cv', filename=c.filename) }}" class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold flex items-center gap-1">
+                      <i class="fas fa-eye"></i> View
+                    </a>
+                  </div>
+                  <div class="mt-2 text-xs font-bold text-emerald-600">✅ ACCEPTED</div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="bg-slate-50 rounded-2xl p-6 text-center text-slate-400 text-sm border border-dashed border-slate-300">
+                <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                No accepted resumes yet.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Rejected -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-rose-700 flex items-center gap-2"><i class="fas fa-times-circle"></i> Rejected Resumes</h2>
+            <span class="bg-rose-100 text-rose-800 text-xs font-bold px-3 py-1 rounded-full">{{ rejected_candidates|length }}</span>
+          </div>
+          <div class="space-y-3">
+            {% if rejected_candidates %}
+              {% for c in rejected_candidates %}
+                <div class="bg-white rounded-2xl shadow-md border border-rose-200 p-4 hover:shadow-lg transition fade-in">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h3 class="font-bold text-slate-800">{{ c.name }}</h3>
+                      <p class="text-xs text-slate-500">{{ c.filename }}</p>
+                    </div>
+                    <a href="{{ url_for('view_cv', filename=c.filename) }}" class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold flex items-center gap-1">
+                      <i class="fas fa-eye"></i> View
+                    </a>
+                  </div>
+                  <div class="mt-2 text-xs font-bold text-rose-600">❌ REJECTED</div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="bg-slate-50 rounded-2xl p-6 text-center text-slate-400 text-sm border border-dashed border-slate-300">
+                <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                No rejected resumes yet.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="mt-12 border-t border-slate-200 py-6 text-center text-xs text-slate-400">
+    <p>© 2026 Resume Screener Pro - Built with <i class="fas fa-heart text-rose-500"></i> for Resume Screening</p>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const config = { searchEnabled: true, itemSelectText: '', shouldSort: false };
+      new Choices(document.getElementById('degree_select'), config);
+      new Choices(document.getElementById('subject_select'), config);
+      new Choices(document.getElementById('category_select'), config);
+      new Choices(document.getElementById('experience_select'), { searchEnabled: true, itemSelectText: '', shouldSort: false });
+
+      const fileInput = document.getElementById('fileInput');
+      const fileList = document.getElementById('file-list');
+
+      fileInput.addEventListener('change', function() {
+        const files = this.files;
+        if (files.length === 0) {
+          fileList.innerHTML = '<span class="text-slate-400">No file chosen</span>';
+          return;
+        }
+        let html = '';
+        for (let i = 0; i < files.length; i++) {
+          html += `<div><i class="fas fa-file text-indigo-500 mr-1"></i> ${files[i].name}</div>`;
+        }
+        fileList.innerHTML = html;
+      });
+
+      const dropZone = document.getElementById('dropZone');
+      dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('dragover');
+      });
+      dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+      });
+      dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+          fileInput.files = e.dataTransfer.files;
+          const event = new Event('change');
+          fileInput.dispatchEvent(event);
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
