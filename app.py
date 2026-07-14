@@ -1401,4 +1401,4 @@ def view_cv(filename):
 if __name__ == "__main__":
     # For production, set debug=False and use a proper WSGI server.
     # To run locally with network access, use host='0.0.0.0'
-    app.run(debug=False, host='0.0.0.0', port=7860)
+    app.run(debug=False, host='0.0.0.0', port=5000)
