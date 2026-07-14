@@ -9,8 +9,6 @@ from flask import Flask, render_template, request, redirect, url_for, send_from_
 from werkzeug.utils import secure_filename
 import pdfplumber
 import docx
-from PIL import Image
-import pytesseract
 
 # ------------------------------
 #  Flask App Configuration
@@ -20,18 +18,10 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change_this_in_production")
 app.config['SESSION_TYPE'] = 'filesystem'
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
-ALLOWED_EXTENSIONS = {"pdf", "docx", "jpg", "jpeg", "png", "webp"}
+ALLOWED_EXTENSIONS = {"pdf", "docx"}
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Check Tesseract availability
-try:
-    pytesseract.get_tesseract_version()
-    TESSERACT_AVAILABLE = True
-except:
-    TESSERACT_AVAILABLE = False
-    print("WARNING: Tesseract OCR not found. Image text extraction will be limited.")
 
 # Debug flag – set to True for detailed console output
 DEBUG = False   # Set to False for production
@@ -1121,19 +1111,6 @@ def normalize_text(text):
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def extract_text_from_image(filepath):
-    try:
-        if not TESSERACT_AVAILABLE:
-            return "image file candidate resume"  # fallback
-        img = Image.open(filepath)
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-        text = pytesseract.image_to_string(img)
-        return normalize_text(text)
-    except Exception as e:
-        print(f"OCR Error: {e}")
-        return "image file candidate resume"  # fallback
-
 def extract_text(filepath, extension):
     text = ""
     try:
@@ -1146,8 +1123,6 @@ def extract_text(filepath, extension):
         elif extension == "docx":
             doc = docx.Document(filepath)
             text = " ".join(p.text for p in doc.paragraphs)
-        elif extension in ["jpg", "jpeg", "png", "webp"]:
-            return extract_text_from_image(filepath)
     except Exception:
         pass
     return normalize_text(text)
@@ -1302,7 +1277,7 @@ def index():
                 continue
 
             if not allowed_file(file.filename):
-                flash(f"⚠️ File format not supported: '{file.filename}'.", "error")
+                flash(f"File format not supported: '{file.filename}'.", "error")
                 continue
 
             ext = file.filename.rsplit(".", 1)[1].lower()
